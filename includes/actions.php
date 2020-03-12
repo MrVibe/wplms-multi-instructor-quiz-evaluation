@@ -38,7 +38,7 @@ class Wplms_Instructor_Quiz_Actions{
     // add_action('before_wplms_quiz_course_retake_reset',array($this,'_before_wplms_quiz_course_retake_reset'),10,2);
     // add_action('before_wplms_quiz_reset',array($this,'_before_wplms_quiz_course_retake_reset'),10,2);
     
-    // for unattempted comment 
+    // for unattempted comment //
    add_action('wplms_quiz_evaluate_question_html',array($this,'show_script_unattempted'),10,2);  //script
    add_action('wplms_quiz_evaluate_per_question_html',array($this,'_wplms_quiz_evaluate_per_question_html_unattempted'),10,4);  // button
    // Ajax
@@ -190,7 +190,8 @@ class Wplms_Instructor_Quiz_Actions{
 
   function _wplms_quiz_evaluate_per_question_html_unattempted($question_id,$quiz_id,$user_id,$marked_answer_id){
     if(empty($marked_answer_id) && !empty($question_id)){
-      echo '<button href="#" class="enable_unattempted_give_marks button" data-question-id='.$question_id.' data-quiz-id='.$quiz_id.'>Give Marks Unattempted</button>';
+      echo '<button href="#" class="enable_unattempted_give_marks button" data-question-id='.$question_id.' 
+      data-quiz-id='.$quiz_id.' >'.__('Show Form For Unattempt Marking','vibe').'</button>';
     }  
   }
   function show_script_unattempted($quiz_id,$user_id){
@@ -203,6 +204,7 @@ class Wplms_Instructor_Quiz_Actions{
         let $this = jQuery(this);
         console.log('submitting unattempted marks');
         let comment_id = $this.data('comment-id');
+        let security = $this.data('security');
         var marks = $this.closest('.unattempted_marking').find('.unattempted_marks').val();
         $this.prepend('<i class="fa fa-spinner animated spin"></i>');
         jQuery.ajax({
@@ -211,6 +213,7 @@ class Wplms_Instructor_Quiz_Actions{
           dataType: 'html',
           data: { action: 'save_unattempted_question_marks',
                   comment_id: comment_id,
+                  security : security,
                   marks: marks,
                 },
           cache: false,
@@ -281,18 +284,22 @@ class Wplms_Instructor_Quiz_Actions{
       // form show
       if(!empty($comment_id)){
         echo '<span class="unattempted_marking">'.__('Marks Obtained','vibe').'<input type="number" value=0 class="form_field unattempted_marks" value=0 placeholder="'.__('Give marks','vibe').'">
-          <button class="give_marks_unattempted button" data-comment-id='.$comment_id.' >'.__('Give marks','vibe').'</button><span></span>
+          <button class="give_marks_unattempted button" data-comment-id='.$comment_id.'  data-security='.wp_create_nonce('save_unattempted_question_marks').'>'.__('Give marks','vibe').'</button><span></span>
           </span>';
       }
       die();
     }
   }
   function save_unattempted_question_marks(){
-    $comment_id = $_POST['comment_id'];
-    $marks = $_POST['marks'];
-    if(is_numeric($comment_id) && is_numeric($marks)){
-      update_comment_meta( $comment_id, 'marks',$marks);
-      echo __('Updated','vibe');
+    if(isset($_POST['security']) && wp_verify_nonce($_POST['security'],'save_unattempted_question_marks') && is_user_logged_in()){
+      $comment_id = $_POST['comment_id'];
+      $marks = $_POST['marks'];
+      if(is_numeric($comment_id) && is_numeric($marks)){
+        update_comment_meta( $comment_id, 'marks',$marks);
+        echo __('Updated','vibe');
+      }
+    }else{
+       echo __('Security Failed','vibe');
     }
     die();
   }
